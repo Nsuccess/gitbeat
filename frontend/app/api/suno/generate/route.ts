@@ -1,0 +1,154 @@
+import { NextRequest, NextResponse } from 'next/server';
+
+interface SunoGenerateRequest {
+  prompt: string;
+  style?: string;
+  title?: string;
+  customMode?: boolean;
+  instrumental?: boolean;
+  model?: string;
+  negativeTags?: string;
+  vocalGender?: 'm' | 'f';
+  styleWeight?: number;
+  weirdnessConstraint?: number;
+  audioWeight?: number;
+}
+
+interface SunoAPIResponse {
+  success: boolean;
+  data?: Record<string, unknown>;
+  error?: string;
+}
+
+
+export async function POST(request: NextRequest) {
+  try {
+    const { 
+      prompt,
+      style,
+      title = "AI Generated Track",
+      customMode = true,
+      instrumental = false,
+      model = "V5",
+      negativeTags = "",
+      vocalGender = "m",
+      styleWeight = 0.65,
+      weirdnessConstraint = 0.65,
+      audioWeight = 0.65
+    }: SunoGenerateRequest = await request.json();
+
+    // Extract style from the prompt if not provided
+    let extractedStyle = style;
+    if (!extractedStyle) {
+      // Look for music genre keywords in the prompt
+      const musicGenres = ['trap', 'hip-hop', 'electronic', 'rock', 'pop', 'jazz', 'blues', 'classical', 'country', 'reggae', 'funk', 'techno', 'house', 'dubstep', 'ambient', 'indie', 'metal', 'punk', 'rap', 'r&b', 'soul', 'disco', 'folk', 'grunge', 'alternative'];
+      const promptLower = prompt.toLowerCase();
+      
+      // Find the first music genre mentioned in the prompt
+      const foundGenre = musicGenres.find(genre => promptLower.includes(genre));
+      extractedStyle = foundGenre ? foundGenre.charAt(0).toUpperCase() + foundGenre.slice(1) : "Electronic";
+    }
+
+    console.log("📥 Received Suno request:", { prompt: prompt.substring(0, 100) + '...', style: extractedStyle, title });
+
+    if (!prompt) {
+      return NextResponse.json({ 
+        success: false,
+        error: 'Prompt is required' 
+      }, { status: 400 });
+    }
+
+    // Smart truncation for Suno's character limit
+    const MAX_PROMPT_LENGTH = 3000; // Conservative limit for better results
+    let truncatedPrompt = prompt;
+    
+    if (prompt.length > MAX_PROMPT_LENGTH) {
+      console.log(`⚠️ Prompt too long (${prompt.length} chars), summarizing to ${MAX_PROMPT_LENGTH}`);
+      
+      // Extract key sections from the analysis
+      const lines = prompt.split('\n');
+      const summary = [];
+      let charCount = 0;
+      
+      // Prioritize: Overview, Key Features, Tech Stack
+      for (const line of lines) {
+        if (charCount + line.length > MAX_PROMPT_LENGTH) break;
+        
+        // Keep important sections
+        if (line.includes('##') || line.includes('###') || 
+            line.includes('Overview') || line.includes('Key') || 
+            line.includes('Technology') || line.includes('Features') ||
+            line.trim().startsWith('-') || line.trim().startsWith('*')) {
+          summary.push(line);
+          charCount += line.length + 1;
+        }
+      }
+      
+      truncatedPrompt = summary.join('\n').substring(0, MAX_PROMPT_LENGTH);
+      console.log(`✂️ Summarized to ${truncatedPrompt.length} chars`);
+    }
+
+    const sunoApiToken = process.env.SUNO_API_TOKEN;
+    if (!sunoApiToken) {
+      return NextResponse.json({ 
+        success: false,
+        error: 'SUNO_API_TOKEN not configured' 
+      }, { status: 500 });
+    }
+
+    const url = 'https://api.sunoapi.org/api/v1/generate';
+    const options = {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${sunoApiToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        prompt: truncatedPrompt,
+        style: extractedStyle,
+        title,
+        customMode,
+        instrumental,
+        model,
+        negativeTags,
+        vocalGender,
+        styleWeight,
+        weirdnessConstraint,
+        audioWeight,
+        callBackUrl: 'https://gitbeat.zeabur.app/api/suno/callback'
+      })
+    };
+
+    console.log("🎵 Calling Suno API...");
+    
+    const response = await fetch(url, options);
+    const data = await response.json();
+    
+    console.log("📡 Suno API response:", data);
+
+    if (!response.ok) {
+      // Handle specific error cases
+      if (data.code === 429) {
+        return NextResponse.json({
+          success: false,
+          error: 'Suno API credits exhausted. Please top up your account at https://sunoapi.org'
+        }, { status: 402 }); // 402 Payment Required
+      }
+      
+      throw new Error(`Suno API error: ${response.status} - ${data.msg || 'Unknown error'}`);
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: data.data // Extract the actual data from Suno's response
+    } as SunoAPIResponse);
+
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Internal server error';
+    console.error("❌ Error in Suno API:", error);
+    return NextResponse.json({
+      success: false,
+      error: errorMessage
+    }, { status: 500 });
+  }
+}
