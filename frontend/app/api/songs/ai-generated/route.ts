@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { randomUUID } from 'crypto';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-const supabase = createClient(supabaseUrl, supabaseKey);
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
 
 // Function to strip emojis from text
 function stripEmojis(text: string): string {
@@ -88,6 +88,14 @@ export async function POST(request: NextRequest) {
 
     // Extract repository name from URL
     const repoName = repository_url.split('/').pop() || 'Unknown Repository';
+
+    // Check if supabase is initialized
+    if (!supabase) {
+      return NextResponse.json({ 
+        success: false,
+        error: 'Database not configured' 
+      }, { status: 500 });
+    }
 
     // First, check if repository exists or create it
     const { data: existingRepo } = await supabase

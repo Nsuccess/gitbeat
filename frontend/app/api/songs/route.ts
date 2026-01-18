@@ -3,6 +3,14 @@ import { supabase } from '@/lib/supabase'
 
 export async function GET() {
   try {
+    // Check if supabase is initialized
+    if (!supabase) {
+      return NextResponse.json(
+        { error: 'Database not configured' },
+        { status: 500 }
+      )
+    }
+
     // Fetch all songs with their repositories and upvote counts
     const { data: songs, error } = await supabase
       .from('songs_with_upvote_counts')

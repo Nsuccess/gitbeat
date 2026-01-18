@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-const supabase = createClient(supabaseUrl, supabaseKey);
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
 
 interface SunoCallbackData {
   code: number;
@@ -58,6 +58,14 @@ export async function POST(request: NextRequest) {
 
     // Get the first track (assuming we generate one track per request)
     const track = generatedTracks[0];
+
+    // Check if supabase is initialized
+    if (!supabase) {
+      return NextResponse.json({ 
+        success: false,
+        error: 'Database not configured' 
+      }, { status: 500 });
+    }
 
     // Find the pending song record by task_id (we'll need to store this)
     // For now, we'll look for songs with no audio_url and match by creation time

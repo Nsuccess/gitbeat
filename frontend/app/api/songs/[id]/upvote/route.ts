@@ -53,6 +53,14 @@ export async function POST(
       )
     }
 
+    // Check if supabase is initialized
+    if (!supabase) {
+      return NextResponse.json(
+        { error: 'Database not configured' },
+        { status: 500 }
+      )
+    }
+
     // Check if song exists
     const { data: song, error: songError } = await supabase
       .from('songs')

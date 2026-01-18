@@ -33,6 +33,14 @@ export async function POST(request: NextRequest) {
     // Extract repository name from URL
     const repoName = repoUrl.split('/').pop() || repoUrl
 
+    // Check if supabase is initialized
+    if (!supabase) {
+      return NextResponse.json(
+        { error: 'Database not configured' },
+        { status: 500 }
+      )
+    }
+
     // Check if repository already exists
     const { data: existingRepo, error: repoCheckError } = await supabase
       .from('repositories')
