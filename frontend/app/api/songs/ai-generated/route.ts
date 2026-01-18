@@ -22,6 +22,11 @@ function stripEmojis(text: string): string {
 // Function to upload lyrics to Supabase storage
 async function uploadLyricsToStorage(lyrics: string, songId: string): Promise<string | null> {
   try {
+    if (!supabase) {
+      console.error("❌ Supabase client not initialized");
+      return null;
+    }
+
     console.log("📤 Starting lyrics upload...");
     console.log("📤 Song ID:", songId);
     console.log("📤 Lyrics length:", lyrics.length);
