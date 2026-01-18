@@ -60,14 +60,7 @@ Get deep insights powered by Groq's Llama 3.3 70B:
 - ⚡ **Groq** (Llama 3.3 70B) - Lightning-fast contributor insights (2-3s response!)
 - 🎵 **Suno AI** - Professional music generation with vocals
 
-**APIs:**
-- 🐙 GitHub API for repository data
 
-![Tech Stack](frontend/public/techstack.png)
-
-## 🏗️ Architecture
-
-![Workflow](frontend/public/workflow.png)
 
 ### Data Flow
 
@@ -128,7 +121,7 @@ cp .env.example .env.local
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) and start generating beats! 🎵
+Open https://gitbeat.zeabur.app/ and start generating beats! 🎵
 
 ### Environment Variables
 
