@@ -1,12 +1,12 @@
-import { createClient } from '@supabase/supabase-js'
+import { createClient, SupabaseClient } from '@supabase/supabase-js'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
 
 // Only create client if we have the required env vars
-export const supabase = supabaseUrl && supabaseAnonKey 
+export const supabase: SupabaseClient | null = supabaseUrl && supabaseAnonKey 
   ? createClient(supabaseUrl, supabaseAnonKey)
-  : null as any // Fallback for build time
+  : null
 
 // Database types
 export interface Repository {
@@ -45,6 +45,8 @@ export interface SongWithUpvotes extends Song {
 
 // Helper functions for file uploads
 export const uploadAudioFile = async (file: File, songId: string) => {
+  if (!supabase) throw new Error('Supabase client not initialized');
+  
   const fileName = `${songId}-${Date.now()}.${file.name.split('.').pop()}`
   
   const { error } = await supabase.storage
@@ -65,6 +67,8 @@ export const uploadAudioFile = async (file: File, songId: string) => {
 }
 
 export const uploadLyricsFile = async (lyrics: string, title: string, songId: string) => {
+  if (!supabase) throw new Error('Supabase client not initialized');
+  
   const fileName = `${songId}-${Date.now()}.txt`
   const content = `Title: ${title}\n\n${lyrics}`
   const file = new Blob([content], { type: 'text/plain' })
